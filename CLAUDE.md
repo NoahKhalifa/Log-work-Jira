@@ -1,7 +1,7 @@
 # CLAUDE.md — Hướng dẫn bối cảnh dự án
 
 > File này được AI agent (Claude Code) tự động đọc mỗi khi bắt đầu phiên làm việc trong thư mục dự án.
-> **Bắt buộc đọc trước khi sửa code. Bắt buộc ghi report sau khi sửa code.**
+> **Bắt buộc đọc trước khi sửa code. Bắt buộc ghi report sau khi sửa code. Bắt buộc cập nhật [SRS.md](SRS.md) sau khi sửa code (xem mục 6).**
 
 ---
 
@@ -21,7 +21,9 @@ Logwork jira/
 ├── app.js                      # File chính — server + HTML inline. Có const VERSION ở đầu file.
 ├── update Logwork Jira.js      # Phiên bản cũ (legacy) — gọi thẳng IP 10.120.10.129, KHÔNG còn dùng làm chính.
 ├── CLAUDE.md                   # File này — context cho AI agent.
+├── SRS.md                      # Đặc tả yêu cầu phần mềm. BẮT BUỘC cập nhật sau mỗi lần sửa code (xem mục 6).
 ├── CHANGELOG.md                # Lịch sử version (Keep a Changelog format).
+├── test/                       # Unit/integration test (node --test, không dependency).
 └── reports/                    # Report mỗi phiên làm việc của agent (xem mục 6).
 ```
 
@@ -69,15 +71,23 @@ Logwork jira/
 - Không có CSRF protection trên endpoint cục bộ — chấp nhận được vì tool dùng nội bộ trên máy cá nhân.
 - Khi sửa luồng auth: test lại flow login + load projects + scan + execute trước khi báo xong.
 
-## 6. Quy trình báo cáo sau mỗi phiên (BẮT BUỘC)
+## 6. Quy trình sau mỗi phiên (BẮT BUỘC)
 
-Sau mỗi phiên làm việc có **thay đổi code, config, hoặc tạo/xoá file**, agent phải:
+Sau mỗi phiên làm việc có **thay đổi code, config, hoặc tạo/xoá file**, agent phải làm **CẢ HAI**:
 
+### 6A. Cập nhật SRS (BẮT BUỘC khi sửa code)
+Nếu thay đổi làm **đổi hành vi / thêm-sửa-xoá chức năng, endpoint, field UI, tham số API, hoặc luồng nghiệp vụ** → phải cập nhật [SRS.md](SRS.md) **trong cùng phiên, trước khi báo xong**:
+1. Sửa các mục liên quan (FR/NFR ở §3–§5, bảng API §4.2, bảng tích hợp Jira §4.3, truy vết §6).
+2. Cập nhật ô **"Cập nhật lần cuối"** ở đầu file và **thêm 1 dòng vào bảng §8 "Lịch sử thay đổi SRS"** (ngày, SRS ver, phần mềm ver, tóm tắt thay đổi).
+3. Nếu chỉ sửa text/CSS/refactor **không đổi behavior** → vẫn rà SRS, nhưng được phép chỉ ghi 1 dòng ở §8 nếu nội dung không đổi.
+4. **Không cần** đụng SRS nếu chỉ đọc/khám phá code hoặc trả lời lý thuyết (không sửa gì).
+
+### 6B. Ghi report phiên
 1. Tạo file report tại `reports/YYYY-MM-DD.md` (theo ngày hiện tại, múi giờ máy user).
 2. Nếu trong cùng ngày đã có file → **append** thêm một block `## Phiên <HH:MM>` mới ở cuối, không ghi đè.
-3. Theo đúng cấu trúc trong [reports/_TEMPLATE.md](reports/_TEMPLATE.md).
+3. Theo đúng cấu trúc trong [reports/_TEMPLATE.md](reports/_TEMPLATE.md); **ghi rõ đã cập nhật SRS phần nào** (hoặc lý do không cần).
 4. Sau khi ghi report, **báo lại trong câu trả lời cuối cùng** cho user theo dạng:
-   > Đã ghi report: `reports/YYYY-MM-DD.md` (phiên HH:MM).
+   > Đã ghi report: `reports/YYYY-MM-DD.md` (phiên HH:MM). Đã cập nhật SRS.md.
 
 **Không cần ghi report khi:**
 - Chỉ đọc / khám phá code, không thay đổi gì.
