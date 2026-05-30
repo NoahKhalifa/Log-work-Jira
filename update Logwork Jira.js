@@ -6,7 +6,7 @@ const path = require("path");
 const { URL } = require("url");
 
 // ============ JIRA HOST / SESSION FILE ============
-const JIRA_HOST = "jira.viettelsoftware.com";
+const JIRA_HOST = "10.120.10.129";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0";
 const SESSION_FILE = path.join(__dirname, ".jira-session.json");
