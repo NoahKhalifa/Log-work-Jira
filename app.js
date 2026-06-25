@@ -5,7 +5,7 @@ const dns = require("dns");
 
 // ============ VERSION ============
 // SemVer. Bump theo CHANGELOG.md mỗi khi release.
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 
 // ============ JIRA HOST / SESSION FILE ============
 const JIRA_HOST = "jira.viettelsoftware.com";
@@ -190,16 +190,21 @@ const HTML_PAGE = `<!DOCTYPE html>
       </div>
       <div class="settings-row">
         <div class="form-group">
+          <label for="workDate">Date (ngày log)</label>
+          <input type="date" id="workDate">
+          <div class="field-hint">Mặc định hôm nay. Áp cho mọi issue.</div>
+        </div>
+        <div class="form-group">
           <label for="userKey">User Key</label>
           <input type="text" id="userKey" placeholder="vd: JIRAUSER14218">
           <div class="field-hint">Tự điền sau khi đăng nhập.</div>
         </div>
         <div class="form-group">
-          <label for="timeSpendHours">Time Spend (giờ)</label>
+          <label for="timeSpendHours">Worked (Giờ đã làm)</label>
           <input type="number" id="timeSpendHours" min="0" step="0.5" value="8">
         </div>
         <div class="form-group">
-          <label for="remainingHours">Remaining (giờ)</label>
+          <label for="remainingHours">Remaining (Giờ còn lại)</label>
           <input type="number" id="remainingHours" min="0" step="0.5" value="0">
         </div>
       </div>
@@ -217,7 +222,7 @@ const HTML_PAGE = `<!DOCTYPE html>
           </select>
         </div>
         <div class="form-group">
-          <label for="fieldValue">Field Value</label>
+          <label for="fieldValue">Type of Work</label>
           <select id="fieldValue">
             <option value="Test" selected>Test</option>
           </select>
@@ -422,9 +427,19 @@ const HTML_PAGE = `<!DOCTYPE html>
       btn.disabled = false;
     }
 
+    // Đặt ô Date mặc định = hôm nay (định dạng YYYY-MM-DD cho input type=date).
+    function setDefaultWorkDate() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      document.getElementById('workDate').value = yyyy + '-' + mm + '-' + dd;
+    }
+
     // Initialize on load
     document.addEventListener('DOMContentLoaded', function () {
       updateJql();
+      setDefaultWorkDate();
       loadSavedSession();
     });
 
@@ -731,6 +746,7 @@ const HTML_PAGE = `<!DOCTYPE html>
       const xsrftoken = document.getElementById('xsrftoken').value.trim();
       const jql = document.getElementById('jql').value.trim();
       const userKey = document.getElementById('userKey').value.trim();
+      const workDate = document.getElementById('workDate').value;
       const timeSpendHours = parseFloat(document.getElementById('timeSpendHours').value);
       const remainingHours = parseFloat(document.getElementById('remainingHours').value);
       const description = document.getElementById('description').value;
@@ -775,7 +791,7 @@ const HTML_PAGE = `<!DOCTYPE html>
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             jsessionid, xsrftoken, jql, issueKeys,
-            userKey, timeSpendHours, remainingHours, description,
+            userKey, workDate, timeSpendHours, remainingHours, description,
             fieldId, fieldName, fieldValue
           })
         });
@@ -1224,6 +1240,8 @@ const server = http.createServer((req, res) => {
 
       // Gom các giá trị log-work từ UI; thiếu thì rơi về DEFAULT_*.
       const userKey = (params.userKey || DEFAULT_USER_KEY).trim();
+      // Ngày log (YYYY-MM-DD) UI chọn; rỗng/sai → logWorkForIssues tự rơi về hôm nay.
+      const workDate = typeof params.workDate === "string" ? params.workDate.trim() : "";
       const timeSpendHours = Number.isFinite(+params.timeSpendHours) && +params.timeSpendHours > 0
         ? +params.timeSpendHours
         : DEFAULT_TIME_SPEND_HOURS;
@@ -1240,6 +1258,7 @@ const server = http.createServer((req, res) => {
 
       const logWorkConfig = {
         userKey,
+        workDate,
         timeSpend: Math.round(timeSpendHours * 3600),
         remainingTime: Math.round(remainingHours * 3600),
         description,
@@ -1425,8 +1444,16 @@ async function fetchIssueDetail(JSESSIONID, XSRF_TOKEN, issueKey) {
 function logWorkForIssues(JSESSIONID, XSRF_TOKEN, issueKeys, logWorkConfig, send, done) {
   const now = new Date();
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const START_DATE = `${String(now.getDate()).padStart(2, "0")}/${MONTHS[now.getMonth()]}/${String(now.getFullYear()).slice(-2)}`;
+  // Ngày log: dùng workDate UI chọn (YYYY-MM-DD) nếu hợp lệ, ngược lại rơi về hôm nay.
+  let baseDate = now;
+  if (typeof logWorkConfig.workDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(logWorkConfig.workDate)) {
+    const [y, m, d] = logWorkConfig.workDate.split("-").map(Number);
+    const parsed = new Date(y, m - 1, d);
+    if (!isNaN(parsed.getTime())) baseDate = parsed;
+  }
+  const START_DATE = `${String(baseDate.getDate()).padStart(2, "0")}/${MONTHS[baseDate.getMonth()]}/${String(baseDate.getFullYear()).slice(-2)}`;
   const END_DATE = START_DATE;
+  // Giờ log giữ theo thời điểm thực thi (now), chỉ ngày là theo lựa chọn của user.
   const TIME = ` ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
   send({ type: "progress", current: 0, total: issueKeys.length });

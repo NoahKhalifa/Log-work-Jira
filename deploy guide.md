@@ -18,7 +18,8 @@ nohup node app.js > server.log 2>&1 &
 
 # kiểm tra
 curl -s localhost:3005 | head -c 100
-You should see HTML starting with <!DOCTYPE html>. Then refresh http://10.110.10.202:3005 in the browser (Ctrl+F5 to bypass cache).
+You should see HTML starting with <!DOCTYPE html>. 
+Then refresh http://10.110.10.202:3005 in the browser (Ctrl+F5 to bypass cache).
 
 Notes:
 

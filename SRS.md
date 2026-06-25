@@ -2,8 +2,8 @@
 
 > **Software Requirements Specification** (Đặc tả yêu cầu phần mềm)
 > Phần mềm: **Jira Log Work Tool**
-> Phiên bản phần mềm mô tả: **v1.0.0** (xem hằng `VERSION` ở đầu [app.js](app.js))
-> Phiên bản tài liệu SRS: **1.0** — Cập nhật lần cuối: **2026-05-30**
+> Phiên bản phần mềm mô tả: **v1.1.0** (xem hằng `VERSION` ở đầu [app.js](app.js))
+> Phiên bản tài liệu SRS: **1.1** — Cập nhật lần cuối: **2026-06-11**
 >
 > ⚠️ **BẮT BUỘC**: Mỗi khi sửa code làm thay đổi hành vi/chức năng/giao diện/API, phải cập nhật file này
 > (xem quy tắc tại mục 6 của [CLAUDE.md](CLAUDE.md)). Mục [§8 Lịch sử thay đổi SRS](#8-lịch-sử-thay-đổi-srs) ghi lại từng lần sửa.
@@ -117,15 +117,16 @@ Nhân viên Viettel cần log-work cho nhiều sub-task cùng lúc (điển hìn
 - **Field Name ẩn mặc định** (vì thường chỉ 1 option, vd "Type Of Work"); **tự hiện lại** nếu Jira trả về >1 field.
 
 ### FR-7 — Cấu hình thông số log-work (M)
-- Người dùng nhập/chọn: **User Key** (tự điền sau login), **Time Spend (giờ)** (mặc định 8, bắt buộc > 0), **Remaining (giờ)** (mặc định 0), **Description** (tùy chọn), **Field Value**.
+- Người dùng nhập/chọn: **Date (ngày log)** (`<input type=date>`, mặc định hôm nay), **User Key** (tự điền sau login), **Worked (Giờ đã làm)** (mặc định 8, bắt buộc > 0), **Remaining (Giờ còn lại)** (mặc định 0), **Description** (tùy chọn), **Type of Work** (dropdown field value).
 - Backend quy đổi giờ → giây (`*3600`); thiếu giá trị thì rơi về `DEFAULT_*`.
+- **Date** gửi lên dạng `YYYY-MM-DD`, backend chuyển sang `dd/MMM/yy` (vd `11/Jun/26`) cho payload Jira; rỗng/sai định dạng → rơi về ngày hiện tại của server.
 
 ### FR-8 — Thực thi log-work (M)
 - Hai chế độ: **"Sử dụng setting cho tất cả issue đã quét"** (gửi toàn bộ `issueKeys`) và **"Chỉ chạy cho issue đang chọn"** (1 key).
 - `/api/execute` nhận **EITHER** `jql` **HOẶC** `issueKeys[]`. Với mỗi issue, server `logWorkForIssues` gọi `POST /rest/f-timesheet/1.0/log-work/create-log-work`.
 - Server **stream NDJSON** các bản tin: `{type:"progress",current,total}`, `{type:"log",message,level}`, `{type:"done",message}`, `{type:"error",message}`.
 - UI cập nhật **thanh tiến trình** + **log màu** (info/success/warn/error) realtime; thành công/thất bại từng issue hiển thị theo HTTP status trả về.
-- `startDate`/`endDate`/`time` lấy theo **thời điểm hiện tại của server** (định dạng `dd/MMM/yy`).
+- `startDate`/`endDate` lấy theo **Date người dùng chọn** ở Bước 3 (định dạng `dd/MMM/yy`); nếu không chọn/sai định dạng thì rơi về ngày hiện tại của server. `time` luôn lấy theo **giờ thực thi** của server.
 
 ### FR-9 — Quản lý token phía client (M)
 - Token chỉ ở `sessionStorage`; có ô nhập tay (JSESSIONID/XSRF) ẩn trong `<details>` để dán thủ công khi cần.
@@ -149,7 +150,7 @@ Nhân viên Viettel cần log-work cho nhiều sub-task cùng lúc (điển hìn
 | POST | `/api/scan-issues` | `{jsessionid, xsrftoken, jql}` | `{ok, issueKeys[], summaries{}}` |
 | POST | `/api/issue-detail` | `{jsessionid, xsrftoken, issueKey}` | `{ok, detail:{key,summary,issuetype,status,assignee,priority,parent,timetracking,created,updated,duedate}}` |
 | POST | `/api/log-work-fields` | `{jsessionid, xsrftoken, issueKey}` | `{ok, fields:[{id,fieldName,fieldType,required,options[]}]}` |
-| POST | `/api/execute` | `{jsessionid, xsrftoken, jql?|issueKeys[]?, userKey, timeSpendHours, remainingHours, description, fieldId, fieldName, fieldValue[]}` | **NDJSON stream**: `progress`/`log`/`done`/`error` |
+| POST | `/api/execute` | `{jsessionid, xsrftoken, jql?|issueKeys[]?, userKey, workDate, timeSpendHours, remainingHours, description, fieldId, fieldName, fieldValue[]}` | **NDJSON stream**: `progress`/`log`/`done`/`error` |
 | * | (khác) | — | `404 Not found` |
 
 Quy ước lỗi: thiếu tham số → `400`; lỗi gọi Jira → `200` với `{ok:false, error}` (riêng `/api/execute` trả bản tin `error` trong stream).
@@ -223,3 +224,4 @@ Quy ước lỗi: thiếu tham số → `400`; lỗi gọi Jira → `200` với 
 | Ngày | SRS ver | Phần mềm ver | Thay đổi |
 |---|---|---|---|
 | 2026-05-30 | 1.0 | 1.0.0 | Tạo SRS lần đầu. Bao gồm các tính năng: summary trong dropdown, panel chi tiết issue (`/api/issue-detail`), ẩn Field Name. |
+| 2026-06-11 | 1.1 | 1.1.0 | Bước 3: thêm ô **Date (ngày log)** (`/api/execute` nhận `workDate`, backend chuyển `YYYY-MM-DD`→`dd/MMM/yy`); đổi label "Time Spend (giờ)"→"Worked (Giờ đã làm)", "Remaining (giờ)"→"Remaining (Giờ còn lại)", "Field Value"→"Type of Work". Cập nhật FR-7, FR-8, bảng API §4.2. |

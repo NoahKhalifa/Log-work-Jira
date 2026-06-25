@@ -8,6 +8,16 @@ Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning
 
 ---
 
+## [1.1.0] — 2026-06-11
+
+### Added
+- **Bước 3 — Date (ngày log)**: thêm ô chọn ngày (`<input type="date">`, mặc định hôm nay) cho phép log work vào ngày bất kỳ thay vì luôn là ngày hiện tại. UI gửi `workDate` (`YYYY-MM-DD`) lên `/api/execute`; backend chuyển sang định dạng Jira `dd/MMM/yy` (vd `11/Jun/26`). Rỗng/sai định dạng → tự rơi về hôm nay.
+
+### Changed
+- Đổi label các trường ở Bước 3 cho khớp dialog Log Work của Jira: "Time Spend (giờ)" → **"Worked (Giờ đã làm)"**, "Remaining (giờ)" → **"Remaining (Giờ còn lại)"**, "Field Value" → **"Type of Work"**.
+
+---
+
 ## [1.0.0] — 2026-05-28
 
 First stable release. Tool đã có flow hoàn chỉnh: login → quét issue theo JQL → cấu hình log work (động) → execute hàng loạt hoặc cho 1 issue cụ thể.
